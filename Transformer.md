@@ -114,21 +114,158 @@ $$
 
 
 
-seq2seq中使用RNN的问题: hard to parallel, 于是有人想盗用CNN替代
+seq2seq中使用RNN的问题: hard to parallel, 于是有人想用CNN替代, 当然也有人提出self-attention
+
+![image-20210315184734598](Transformer/image-20210315184734598.png)
+
+### Self-Attention Layer
+
+![image-20210315184702743](Transformer/image-20210315184702743.png)
+$$
+q^{i}=W^{q} a^{i}\\
+k^{i}=W^{k} a^{i}\\
+v^{i}=W^{v} a^{i}
+$$
+<img src="Transformer/image-20210315190516684.png" alt="image-20210315190516684" style="zoom:50%;" />
+
+### Multi-head Self-attention
+
+<img src="Transformer/image-20210315192716075.png" alt="image-20210315192716075" style="zoom:50%;" />
+
+<img src="Transformer/image-20210315192730176.png" alt="image-20210315192730176" style="zoom:50%;" />
+
+多个head的原因是: 每个head的关注点不一样
+
+<img src="Transformer/image-20210315195543763.png" alt="image-20210315195543763" style="zoom:50%;" />
+
+### Bert: unsupervise trained transformer, Encoder of Transformer
+
+bert有24层, 48层
+
+| 训练方法1: Masked LM<br/><br/>15 % 词汇被随机置换为[Mask], 要求bert把这15%词汇填回来, 即把[MASK]通过bert运行后返回的对应embedding交给linear multi-class classifier用于预测被masked的是谁.<br/><br/>如果两个词天在同一个地方没有违和感, 那他们就有相似的emebdding. e.g. "潮水退了就知道谁没穿裤子", "潮水落了就知道谁没穿裤子", "退了"与"落了"就会有相似的embedding | 训练方法2: Next Sentence Prediction(给两个句子判断他们是连在一起的or not)<br/><br/>[CLS]醒醒吧[SEP]你没有妹妹, [SEP]: the boundary of two sentences [CLS]告诉bert需要做分类的事情<br/><br/>把[CLS]经过bert返回的embedding放入linear binary classifier, 这个clkassifier返回yes/no判断接下来的两个句子 |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| <img src="Transformer/image-20210315202257845.png" alt="image-20210315202257845" style="zoom:50%;" /> | <img src="Transformer/image-20210315202243447.png" alt="image-20210315202243447" style="zoom:100%;" /> |
+
+不考虑一开始的位置向量的话, 对于self-attention来说, 一个词/句子无论是放在那里都没有影响, 都要评估它与所有其他词的关系
+
+Linear binary classifier 与bert一同被训练
+
+#### 实际操作
+
+approach1与2同时被使用用来训练bert, 这样学的最好
+
+问题来了, 怎么用bert呢?
+
+### bert的应用
+
+| 一般情况                                                     | case 2 预测句子中的词汇的词性                                | case 3 输入两个句子, output一个class, e.g. 给出"前提", 判断"假设"是否成立 | case QA system                                               |
+| ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| ![image-20210315203126480](Transformer/image-20210315203126480.png) | <img src="Transformer/image-20210315203542310.png" alt="image-20210315203542310" style="zoom:100%;" /> | ![image-20210315204034002](Transformer/image-20210315204034002.png) | ![image-20210315204251333](Transformer/image-20210315204251333.png) |
+|                                                              |                                                              |                                                              | 学出两个vector, liangge vector与bert返回的emberrding做dot product, 接着softmax处理拿到p distri |
+
+在这些应用中, bert用与训练模型, 但需要用fine-tune进行微调, classifier需要自己训练, 二者同时进行
+
+### Bert参考文章 1 [理解BERT：一个突破性NLP框架的综合指南](https://www.jiqizhixin.com/articles/2019-11-05-2)
+
+BERT架构建立在Transformer之上。我们目前有两个可用的版本:
+
+- BERT Base:12层transformer，12个attention heads和1.1亿个参数
+- BERT Large:24层transformer，16个attention heads和3.4亿个参数
+
+
+
+输入:
+
+综合的Embedding方案包含了很多对模型有用的信息
+
+![img](Transformer/640.png)
+
+1. **位置嵌入(Position Embeddings)**:BERT学习并使用位置嵌入来表达句子中单词的位置。这些是为了克服Transformer的限制而添加的，Transformer与RNN不同，它不能捕获“序列”或“顺序”信息
+2. **段嵌入(Segment Embeddings)**:BERT还可以将句子对作为任务的输入(可用于问答)。这就是为什么它学习第一和第二句话的独特嵌入，以帮助模型区分它们。在上面的例子中，所有标记为EA的标记都属于句子A(对于EB也是一样)
+3. **目标词嵌入(Token Embeddings)**:这些是从WordPiece词汇表中对特定词汇学习到的嵌入
 
 
 
 
 
-Bert: unsupervise trained transformer
+
+
+# Domain Adaptation
+
+训练集与测试机有较大差异时
+
+| 原因                                                         | 目的                                                         |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| ![image-20210315232400403](Transformer/image-20210315232400403.png) | ![image-20210315232417647](Transformer/image-20210315232417647.png) |
 
 
 
-# Deep learning for Question Answering System
+### Discrepancy based
+
+通过与先拿到的统计学上的数据, 来计算target&source上的距离. 希望他们的距离尽可能的小
+
+| Deep Domain Confusion                                        | Deep Adaptation Networks                                     | CORAL: use 2nd order moments                                 | CMD: use even higher moments                                 |
+| ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| ![image-20210315232937626](Transformer/image-20210315232937626.png) | ![image-20210315233136428](Transformer/image-20210315233136428.png) | ![image-20210315233251025](Transformer/image-20210315233251025.png) | ![image-20210315233436812](Transformer/image-20210315233436812.png) |
+| 最小化source domain上的classification loss与source&target之间的差异 | 与之前一样, 但是从1层变为了30层                              | 前面的算法本职位1st order moments计算距离, 这里用2nd order moments计算距离 |                                                              |
 
 
 
-# Doamin Adaptation
+### Adversarial based
+
+| **Simultaneous Deep Transfer Across Domains and Tasks**      | **Domain Adversarial Training of Neural Networks**           | PixelDA                                                      |
+| ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| <img src="Transformer/image-20210316012835429.png" alt="image-20210316012835429" style="zoom:50%;" /> | <img src="Transformer/image-20210316013639871.png" alt="image-20210316013639871" style="zoom:100%;" /> | <img src="Transformer/image-20210316014443853.png" alt="image-20210316014443853" style="zoom:50%;" /> |
+| ![image-20210316012857478](Transformer/image-20210316012857478.png) |                                                              |                                                              |
+| [参考](https://zhuanlan.zhihu.com/p/30621691)                | 绿色:extarctor,特征提取<br/>蓝色:classifier,属于什么label<br/>红色:binary classification,来源于source/target |                                                              |
+
+### Reconstruction based
+
+这讲的不太好 -_-
+
+## Application
+
+1. Image to Image Translation
+
+   Cross-Domain Image Translation
+
+   * Unsupervised Image-to-Image Translation Networks (UNIT)
+
+   * | -                                                            | -                                                            | -    |
+     | ------------------------------------------------------------ | ------------------------------------------------------------ | ---- |
+     | ![image-20210316024815651](Transformer/image-20210316024815651.png) | ![image-20210316024825449](Transformer/image-20210316024825449.png) |      |
+
+     |                                                              | -                                                            | -                                                            |
+     | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+     | ![image-20210316025038341](Transformer/image-20210316025038341.png) | ![image-20210316025046653](Transformer/image-20210316025046653.png) | ![image-20210316025058735](Transformer/image-20210316025058735.png) |
+
+   * 
+
+     $\mathcal{L}_{\mathrm{VAE}_{1}}\left(E_{1}, G_{1}\right)=\lambda_{1} \operatorname{KL}\left(q_{1}\left(z_{1} \mid x_{1}\right) \| p_{\eta}(z)\right)-\lambda_{2} \mathbb{E}_{z_{1} \sim q_{1}\left(z_{1} \mid x_{1}\right)}\left[\log p_{G_{1}}\left(x_{1} \mid z_{1}\right)\right]$
+
+     $\mathcal{L}_{\mathrm{GAN}_{1}}\left(E_{2}, G_{1}, D_{1}\right)=\lambda_{0} \mathbb{E}_{x_{1} \sim P_{X_{1}}}\left[\log D_{1}\left(x_{1}\right)\right]+\lambda_{0} \mathbb{E}_{z_{2} \sim q_{2}\left(z_{2} \mid x_{2}\right)}\left[\log \left(1-D_{1}\left(G_{1}\left(z_{2}\right)\right)\right)\right]$
+
+     $\left.\mathcal{L}_{\mathrm{CC}_{1}}\left(E_{1}, G_{1}, E_{2}, G_{2}\right)=\lambda_{3} \mathrm{KL}\left(q_{1}\left(z_{1} \mid x_{1}\right) \| p_{\eta}(z))+\lambda_{3} \mathrm{KL}\left(q_{2}\left(z_{2} \mid x_{1}^{1 \rightarrow 2}\right)\right)\right| \mid p_{\eta}(z)\right)-\\\lambda_{4} \mathbb{E}_{z_{2} \sim q_{2}\left(z_{2} \mid x_{1}^{1 \rightarrow 2}\right)}\left[\log p_{G_{1}}\left(x_{1} \mid z_{2}\right)\right]$
+
+   MUNIT
+
+2. Semantic Segmentation
+
+   AdaptSegNet
+
+   ![image-20210316025232281](Transformer/image-20210316025232281.png)
+
+   ![image-20210316025242869](Transformer/image-20210316025242869.png)
+
+   CBST 详见pdf
+
+3. Person Re-ID
+
+   SPGAN
+
+   ECN
+
+
 
 
 
